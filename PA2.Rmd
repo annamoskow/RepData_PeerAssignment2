@@ -1,0 +1,135 @@
+---
+title: "NOAA Storm Data Analysis"
+author: "Anna M"
+date: "2023-02-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synposis
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+The goal of this project is to reveal which types of storms cause the most damage in terms of both population health and economic cost.
+
+## Data Import
+
+```{r import}
+url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+download.file(url, destfile = "stormdata.csv.bz2", method = "curl")
+stormdata <- read.csv("stormdata.csv.bz2")
+```
+
+## Data Processing
+
+Below, I will show my steps for how I approached data processing with respect to the two questions I am aiming to answer.
+
+## Q1: Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+First, I am going to select relevant data (Event Type, Fatalities, Injuries).
+
+```{r Q1}
+library(dplyr)
+
+harmful <- stormdata 
+harmful <- harmful %>%
+  select(EVTYPE, FATALITIES, INJURIES)
+```
+
+Then, I am going to calculate the total number of fatalities and injuries by event type.
+
+```{r}
+harmful_sum <- harmful
+harmful_sum <- harmful_sum %>%
+  group_by(EVTYPE) %>%
+  summarise(fatalitySUM = sum(FATALITIES), injurySUM = sum(INJURIES))
+```
+
+Finally, I will find the maximum value of fatilities and injuries by event type.
+
+```{r}
+harmful_final <- harmful_sum[, c("EVTYPE", "fatalitySUM", "injurySUM")]
+
+harmful_final <- harmful_final %>%
+  arrange(desc(fatalitySUM))
+head(harmful_final)
+
+harmful_final_inj <- harmful_final %>%
+  arrange(desc(injurySUM))
+head(harmful_final_inj)
+```
+
+From this, we see that tornados are the most harmful to population health in terms of both total fatalities and total injuries.
+
+## Q2: Across the United States, which types of events have the greatest economic consequences?
+
+First, I am going to select the relevant data (Event Type, Property Damage, Crop Damage).
+
+```{r}
+economic <- stormdata
+economic <- economic %>%
+  select(EVTYPE, PROPDMG, CROPDMG)
+```
+
+Then, I am going to calculate the total cost of property and crop damage by event type.
+
+```{r}
+economic_harm <- economic
+economic_harm <- economic_harm %>%
+  group_by(EVTYPE) %>%
+  summarise(propertySUM = sum(PROPDMG), cropSUM = sum(CROPDMG))
+```
+
+Finally, I will find the maximum cost of property and crop damage by event type.
+
+```{r}
+economic_final <- economic_harm[, c("EVTYPE", "propertySUM", "cropSUM")]
+
+economic_final <- economic_final %>%
+  arrange(desc(propertySUM))
+head(economic_final)
+
+economic_final_crop <- economic_final %>%
+  arrange(desc(cropSUM))
+head(economic_final_crop)
+```
+From this, we see that the most costly events for property damage are tornados, at a total of $3,212,258.20. However, the most costly events for crop damage are hail, at a total of 579,596.26.
+
+## Results
+
+When looking at the most damaging types of events with respect to their impact on population health, it is clear to see that tornadoes are the most damaging. This visualisation will just show fatalities.
+
+```{r}
+library(ggplot2)
+
+top_harmful <- head(harmful_final)
+
+fatalitiesplot <- ggplot(top_harmful, mapping = aes(EVTYPE, fatalitySUM)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Event Type", y = "Fatalities", title = "Fatalities by Storm Type")
+
+print(fatalitiesplot)
+```
+When looking at the most expensive events by storm type, we have identified tornadoes and hail as the most damaging types of storms for property damage and crop damage, respectively. We can now see this visually. 
+
+```{r}
+top_economic <- head(economic_final)
+
+propertyplot <- ggplot(top_economic, mapping = aes(EVTYPE, propertySUM)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Event Type", y = "Property Damage ($)", title = "Property Damage by Storm Type")
+
+print(propertyplot)
+
+cropplot <- ggplot(top_economic, mapping = aes(EVTYPE, cropSUM)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Event Type", y = "Crop Damage ($)", title = "Crop Damage by Storm Type")
+
+print(cropplot)
+```
+
